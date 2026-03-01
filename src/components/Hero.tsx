@@ -15,7 +15,6 @@ function DoubleSidedPhoto({ url, isSelected, isAnySelected, onSelect, item, ...p
   const groupRef = useRef<THREE.Group>(null);
   const glowMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const glowMeshRef = useRef<THREE.Mesh>(null);
-  const textRef = useRef<any>(null);
   const { camera } = useThree();
 
   useEffect(() => {
@@ -43,17 +42,12 @@ function DoubleSidedPhoto({ url, isSelected, isAnySelected, onSelect, item, ...p
       }
     }
 
-    const targetOpacity = (hovered && !isSelected && !isAnySelected) ? 1 : 0;
-
     if (glowMaterialRef.current && glowMeshRef.current) {
+      const targetOpacity = (hovered && !isSelected && !isAnySelected) ? 1 : 0;
       glowMaterialRef.current.opacity = THREE.MathUtils.lerp(glowMaterialRef.current.opacity, targetOpacity, 0.15);
       
       const targetScale = (hovered && !isSelected && !isAnySelected) ? 1.04 : 1.0;
       glowMeshRef.current.scale.setScalar(THREE.MathUtils.lerp(glowMeshRef.current.scale.x, targetScale, 0.15));
-    }
-
-    if (textRef.current) {
-      textRef.current.fillOpacity = THREE.MathUtils.lerp(textRef.current.fillOpacity, targetOpacity, 0.15);
     }
   });
 
@@ -61,12 +55,14 @@ function DoubleSidedPhoto({ url, isSelected, isAnySelected, onSelect, item, ...p
     <group 
       ref={groupRef}
       {...props} 
-      onClick={(e) => { 
+      onPointerDown={(e) => { 
         e.stopPropagation(); 
-        if (isSelected) {
-          onSelect(null); // Deselect if already selected
-        } else {
-          onSelect(item?.id); // Select if not selected
+        if (e.button === 0) { // Only respond to left click
+          if (isSelected) {
+            onSelect(null); // Deselect if already selected
+          } else {
+            onSelect(item?.id); // Select if not selected
+          }
         }
       }}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
@@ -86,19 +82,6 @@ function DoubleSidedPhoto({ url, isSelected, isAnySelected, onSelect, item, ...p
       </mesh>
       {/* Front Side */}
       <Image url={url} transparent opacity={opacity} side={THREE.FrontSide} />
-      {/* Hover Text */}
-      <Text
-        ref={textRef}
-        position={[0, 0, 0.01]}
-        fontSize={0.08}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-        fillOpacity={0}
-        font="https://fonts.gstatic.com/s/spacegrotesk/v15/V8mQoQDjQSkGpu8pn62IFA.woff"
-      >
-        CLICK TO VIEW
-      </Text>
       {/* Back Side */}
       <Image 
         url={url} 
