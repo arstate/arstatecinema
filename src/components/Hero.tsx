@@ -13,16 +13,19 @@ const CLOUD_COUNT = 60;
 function DoubleSidedPhoto({ url, isSelected, isAnySelected, onSelect, item, ...props }: any) {
   const [hovered, setHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
+  const glowMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const glowMeshRef = useRef<THREE.Mesh>(null);
+  const textRef = useRef<any>(null);
   const { camera } = useThree();
 
   useEffect(() => {
-    if (hovered) {
-      document.body.classList.add('is-hovering-photo');
+    if (hovered && !isSelected && !isAnySelected) {
+      document.body.style.cursor = 'pointer';
     } else {
-      document.body.classList.remove('is-hovering-photo');
+      document.body.style.cursor = 'default';
     }
-    return () => document.body.classList.remove('is-hovering-photo');
-  }, [hovered]);
+    return () => { document.body.style.cursor = 'default'; };
+  }, [hovered, isSelected, isAnySelected]);
 
   const opacity = isSelected ? 1 : (isAnySelected ? 0.1 : 1);
 
@@ -39,27 +42,63 @@ function DoubleSidedPhoto({ url, isSelected, isAnySelected, onSelect, item, ...p
         groupRef.current.quaternion.slerp(targetLocalQuaternion, 0.1);
       }
     }
+
+    const targetOpacity = (hovered && !isSelected && !isAnySelected) ? 1 : 0;
+
+    if (glowMaterialRef.current && glowMeshRef.current) {
+      glowMaterialRef.current.opacity = THREE.MathUtils.lerp(glowMaterialRef.current.opacity, targetOpacity, 0.15);
+      
+      const targetScale = (hovered && !isSelected && !isAnySelected) ? 1.04 : 1.0;
+      glowMeshRef.current.scale.setScalar(THREE.MathUtils.lerp(glowMeshRef.current.scale.x, targetScale, 0.15));
+    }
+
+    if (textRef.current) {
+      textRef.current.fillOpacity = THREE.MathUtils.lerp(textRef.current.fillOpacity, targetOpacity, 0.15);
+    }
   });
 
   return (
     <group 
       ref={groupRef}
       {...props} 
-      onPointerDown={(e) => { 
+      onClick={(e) => { 
         e.stopPropagation(); 
-        if (e.button === 0) { // Only respond to left click
-          if (isSelected) {
-            onSelect(null); // Deselect if already selected
-          } else {
-            onSelect(item?.id); // Select if not selected
-          }
+        if (isSelected) {
+          onSelect(null); // Deselect if already selected
+        } else {
+          onSelect(item?.id); // Select if not selected
         }
       }}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
       onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
     >
+      {/* Glow Border */}
+      <mesh ref={glowMeshRef} position={[0, 0, -0.0025]}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial 
+          ref={glowMaterialRef}
+          color={[2, 2, 2]} 
+          transparent 
+          opacity={0} 
+          toneMapped={false} 
+          side={THREE.DoubleSide}
+        />
+      </mesh>
       {/* Front Side */}
       <Image url={url} transparent opacity={opacity} side={THREE.FrontSide} />
+      {/* Hover Text */}
+      <Text
+        ref={textRef}
+        position={[0, 0, 0.01]}
+        fontSize={0.08}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+        fillOpacity={0}
+        font="https://fonts.gstatic.com/s/spacegrotesk/v15/V8mQoQDjQSkGpu8pn62IFA.woff"
+      >
+        CLICK TO VIEW
+      </Text>
       {/* Back Side */}
       <Image 
         url={url} 
